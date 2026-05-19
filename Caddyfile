@@ -1,0 +1,18 @@
+# Replace studio.yourdomain.com with your actual domain
+# Caddy auto-provisions SSL via Let's Encrypt
+
+studio.yourdomain.com {
+    reverse_proxy localhost:3000
+
+    # Optional: basic auth for single-user mode
+    # Generate hash with: caddy hash-password
+    # basicauth {
+    #     youruser JDJhJDE0J3lvdXJoYXNoaGVyZQ
+    # }
+
+    encode gzip
+    log {
+        output file /var/log/caddy/studio.log
+        format console
+    }
+}

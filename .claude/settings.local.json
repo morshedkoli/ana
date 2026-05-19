@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Copy-Item D:\\\\influencer\\\\.env.example D:\\\\influencer\\\\.env)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3000/character\" -UseBasicParsing -TimeoutSec 15; Write-Host \"Status: $\\($r.StatusCode\\)\"; $r.Content | Select-String -Pattern \"Ana\" | Select-Object -First 3)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3000/character\" -UseBasicParsing -TimeoutSec 15; if \\($r.Content -match 'Ana'\\) { \"✓ Ana found on page\" } else { \"✗ Ana NOT found\" })",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git add *)"
+    ]
+  }
+}

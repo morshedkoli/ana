@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Geist:wght@300;400;500;600;700&family=Hind+Siliguri:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Editorial dark with rose accent — feels like a private creative studio */
+    --bg: 24 14% 7%;
+    --surface: 24 12% 10%;
+    --elevated: 24 10% 13%;
+    --border: 24 8% 18%;
+    --ink: 36 22% 92%;
+    --muted: 30 8% 58%;
+    --accent: 350 76% 62%;
+    --accent-fg: 350 30% 12%;
+    --rose: 350 76% 62%;
+    --amber: 38 92% 60%;
+    --success: 142 60% 52%;
+    --danger: 0 72% 60%;
+    --radius: 14px;
+  }
+
+  * { border-color: hsl(var(--border)); }
+
+  html, body {
+    background-color: hsl(var(--bg));
+    color: hsl(var(--ink));
+    font-family: 'Geist', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-image:
+      radial-gradient(at 0% 0%, hsla(350, 76%, 62%, 0.06) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(38, 92%, 60%, 0.04) 0px, transparent 50%);
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4 { font-family: 'Fraunces', serif; letter-spacing: -0.015em; }
+  ::selection { background: hsl(var(--accent) / 0.4); }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: hsl(var(--bg)); }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted) / 0.5); }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg bg-surface border border-border/60;
+  }
+  .card-hover {
+    @apply transition-all hover:border-border hover:bg-elevated;
+  }
+  .input-base {
+    @apply w-full rounded-md bg-elevated border border-border px-3 py-2 text-sm
+           placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40
+           focus:border-accent/40 transition-colors;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium
+           bg-accent text-accent-fg hover:brightness-110 active:brightness-95 transition-all
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium
+           bg-elevated border border-border text-ink hover:bg-surface hover:border-muted/40
+           transition-all disabled:opacity-50;
+  }
+  .btn-icon {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-md
+           bg-elevated border border-border text-muted hover:text-ink hover:bg-surface
+           transition-colors;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium
+           bg-elevated border border-border text-muted;
+  }
+  .pill-accent { @apply bg-accent/15 border-accent/30 text-accent; }
+  .pill-success { background: hsl(var(--success) / 0.15); border-color: hsl(var(--success) / 0.3); color: hsl(var(--success)); }
+  .pill-amber { background: hsl(var(--amber) / 0.15); border-color: hsl(var(--amber) / 0.3); color: hsl(var(--amber)); }
+  .pill-danger { background: hsl(var(--danger) / 0.15); border-color: hsl(var(--danger) / 0.3); color: hsl(var(--danger)); }
+
+  .label-tiny {
+    @apply text-[10px] uppercase tracking-[0.16em] font-medium text-muted;
+  }
+  .grain::after {
+    content: '';
+    pointer-events: none;
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' /></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.5'/></svg>");
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+    z-index: 100;
+  }
+}
+
+/* Bangla text styling */
+.bangla, [lang="bn"] {
+  font-family: 'Hind Siliguri', sans-serif;
+  line-height: 1.7;
+}
