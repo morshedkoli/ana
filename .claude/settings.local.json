@@ -6,7 +6,9 @@
       "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3000/character\" -UseBasicParsing -TimeoutSec 15; if \\($r.Content -match 'Ana'\\) { \"✓ Ana found on page\" } else { \"✗ Ana NOT found\" })",
       "Bash(git init *)",
       "Bash(git remote *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

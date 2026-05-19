@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { connectDB, characters, images, trends, videoProjects, audioClips } from '@/lib/db/client';
+import { connectDB, characters, images, trends, videoProjects, audioClips, plain, plainOne } from '@/lib/db/client';
+import type { VideoProject, Image, Character } from '@/lib/db/schema';
 import { PageHeader } from '@/components/shared/page-header';
 import { ArrowRight, Calendar as CalIcon, ImageIcon, TrendingUp, Mic, Plus, Sparkles } from 'lucide-react';
-import { formatRelative, truncate } from '@/lib/utils';
+import { truncate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,18 +22,19 @@ async function getStats() {
 
 async function getUpcoming() {
   await connectDB();
-  return (await videoProjects.find({ status: 'ready' }).sort({ scheduledDate: -1 }).limit(4)).map(r => r.toJSON());
+  return plain<VideoProject>(
+    await videoProjects.find({ status: 'ready' }).sort({ scheduledDate: -1 }).limit(4)
+  );
 }
 
 async function getRecentImages() {
   await connectDB();
-  return (await images.find().sort({ createdAt: -1 }).limit(6)).map(r => r.toJSON());
+  return plain<Image>(await images.find().sort({ createdAt: -1 }).limit(6));
 }
 
 async function getActiveCharacter() {
   await connectDB();
-  const doc = await characters.findOne({ isActive: true });
-  return doc?.toJSON() ?? null;
+  return plainOne<Character>(await characters.findOne({ isActive: true }));
 }
 
 export default async function HomePage() {
@@ -53,7 +55,6 @@ export default async function HomePage() {
         }
       />
 
-      {/* Stats row */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Image library" value={stats.images} icon={ImageIcon} href="/library" />
         <StatCard label="Voice clips" value={stats.audioClips} icon={Mic} href="/voice" />
@@ -61,9 +62,7 @@ export default async function HomePage() {
         <StatCard label="Posted" value={stats.posted} sub={`${stats.projects} total`} icon={CalIcon} href="/calendar" />
       </section>
 
-      {/* Two-column main area */}
       <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        {/* Upcoming */}
         <div className="space-y-4">
           <div className="flex items-end justify-between">
             <h2 className="font-display text-2xl">Up next</h2>
@@ -71,7 +70,6 @@ export default async function HomePage() {
               View calendar <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-
           {upcoming.length === 0 ? (
             <div className="card p-6 text-sm text-muted">
               No videos queued. Open the <Link href="/calendar" className="text-accent underline-offset-4 hover:underline">calendar</Link> to plan one.
@@ -96,8 +94,6 @@ export default async function HomePage() {
               ))}
             </ul>
           )}
-
-          {/* Quick actions */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <QuickAction href="/generate" label="Generate image" />
             <QuickAction href="/voice" label="Make voice" />
@@ -106,7 +102,6 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Recent images */}
         <div className="space-y-4">
           <div className="flex items-end justify-between">
             <h2 className="font-display text-2xl">Recent images</h2>
@@ -121,7 +116,7 @@ export default async function HomePage() {
           ) : (
             <div className="grid grid-cols-3 gap-2">
               {recentImages.map((img) => (
-                <Link key={img.id} href={`/library`} className="group block aspect-[3/4] overflow-hidden rounded-md bg-elevated">
+                <Link key={img.id} href="/library" className="group block aspect-[3/4] overflow-hidden rounded-md bg-elevated">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={img.thumbnailPath || img.filePath.replace(/^.*\/storage\//, '/storage/')}
@@ -135,7 +130,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Character status */}
       {active && (
         <section className="card p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -156,12 +150,9 @@ export default async function HomePage() {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-void formatRelative;
-
-function StatCard({
-  label, value, sub, icon: Icon, href,
-}: { label: string; value: number; sub?: string; icon: React.ElementType; href: string }) {
+function StatCard({ label, value, sub, icon: Icon, href }: {
+  label: string; value: number; sub?: string; icon: React.ElementType; href: string;
+}) {
   return (
     <Link href={href} className="card card-hover group p-5">
       <div className="flex items-start justify-between">

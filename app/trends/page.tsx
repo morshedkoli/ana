@@ -1,4 +1,5 @@
-import { connectDB, trends } from '@/lib/db/client';
+import { connectDB, trends, plain } from '@/lib/db/client';
+import type { Trend } from '@/lib/db/schema';
 import { PageHeader } from '@/components/shared/page-header';
 import { TrendsBoard } from './trends-board';
 
@@ -6,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function TrendsPage() {
   await connectDB();
-  const rows = (await trends.find().sort({ savedAt: -1 })).map(r => r.toJSON());
+  const rows = plain<Trend>(await trends.find().sort({ savedAt: -1 }));
   return (
     <div className="space-y-8 animate-fade-in">
       <PageHeader

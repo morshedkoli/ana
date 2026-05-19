@@ -20,7 +20,7 @@ export function FrameExtractor() {
   const [maxFrames, setMaxFrames] = useState(20);
   const [loading, setLoading] = useState(false);
   const [frames, setFrames] = useState<Frame[]>([]);
-  const [saved, setSaved] = useState<Set<number>>(new Set());
+  const [saved, setSaved] = useState<Set<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function extractFromUrl() {

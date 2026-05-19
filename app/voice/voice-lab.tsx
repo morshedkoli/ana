@@ -42,7 +42,7 @@ export function VoiceLab({ character, recent }: { character?: Character; recent:
         // Reload list
         toast.success('Saved to library');
         setClips((prev) => [{
-          id: Date.now(), characterId: character?.id ?? null,
+          id: String(Date.now()), characterId: character?.id ?? null,
           filePath: data.publicPath, transcript: text,
           language: 'bn-BD', voiceEngine: 'edge-tts', voiceId: voice,
           rate, pitch, durationSec: data.durationSec,

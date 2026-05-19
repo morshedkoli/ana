@@ -1,4 +1,5 @@
-import { connectDB, images } from '@/lib/db/client';
+import { connectDB, images, plain } from '@/lib/db/client';
+import type { Image } from '@/lib/db/schema';
 import { PageHeader } from '@/components/shared/page-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ImageIcon, Plus } from 'lucide-react';
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function LibraryPage() {
   await connectDB();
-  const rows = (await images.find().sort({ createdAt: -1 })).map(r => r.toJSON());
+  const rows = plain<Image>(await images.find().sort({ createdAt: -1 }));
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -18,14 +19,11 @@ export default async function LibraryPage() {
         title="Image library"
         description={`${rows.length} image${rows.length === 1 ? '' : 's'} across all sources`}
         actions={
-          <>
-            <Link href="/generate" className="btn-primary">
-              <Plus className="h-4 w-4" /> Generate
-            </Link>
-          </>
+          <Link href="/generate" className="btn-primary">
+            <Plus className="h-4 w-4" /> Generate
+          </Link>
         }
       />
-
       {rows.length === 0 ? (
         <EmptyState
           icon={ImageIcon}

@@ -1,4 +1,5 @@
-import { connectDB, characters, images } from '@/lib/db/client';
+import { connectDB, characters, images, plainOne, plain } from '@/lib/db/client';
+import type { Character, Image } from '@/lib/db/schema';
 import { PageHeader } from '@/components/shared/page-header';
 import { CharacterEditor } from './character-editor';
 import { redirect } from 'next/navigation';
@@ -9,16 +10,13 @@ export default async function CharacterPage() {
   await connectDB();
 
   let activeDoc = await characters.findOne({ isActive: true });
-  if (!activeDoc) {
-    activeDoc = await characters.findOne();
-  }
+  if (!activeDoc) activeDoc = await characters.findOne();
   if (!activeDoc) redirect('/');
 
-  const active = activeDoc.toJSON();
-
-  const imgs = (await images.find({ characterId: active.id })
-    .sort({ createdAt: -1 })
-    .limit(12)).map(r => r.toJSON());
+  const active = plainOne<Character>(activeDoc)!;
+  const imgs = plain<Image>(
+    await images.find({ characterId: active.id }).sort({ createdAt: -1 }).limit(12)
+  );
 
   return (
     <div className="space-y-10 animate-fade-in">

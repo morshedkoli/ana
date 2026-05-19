@@ -1,4 +1,5 @@
-import { connectDB, videoProjects } from '@/lib/db/client';
+import { connectDB, videoProjects, plain } from '@/lib/db/client';
+import type { VideoProject } from '@/lib/db/schema';
 import { PageHeader } from '@/components/shared/page-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ListChecks, ExternalLink, Hash } from 'lucide-react';
@@ -8,7 +9,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function QueuePage() {
   await connectDB();
-  const ready = (await videoProjects.find({ status: { $in: ['edited', 'ready'] } }).sort({ scheduledDate: -1 })).map(r => r.toJSON());
+  const ready = plain<VideoProject>(
+    await videoProjects.find({ status: { $in: ['edited', 'ready'] } }).sort({ scheduledDate: -1 })
+  );
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -17,7 +20,6 @@ export default async function QueuePage() {
         title="Post queue"
         description="Videos ready to publish. Open TikTok, paste your caption, toggle AI disclosure."
       />
-
       {ready.length === 0 ? (
         <EmptyState
           icon={ListChecks}
