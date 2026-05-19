@@ -35,7 +35,7 @@ export function TrendsBoard({ trends: initial }: { trends: Trend[] }) {
     } finally { setLoading(false); }
   }
 
-  async function remove(id: number) {
+  async function remove(id: string) {
     if (!confirm('Delete this trend?')) return;
     setTrends((p) => p.filter((t) => t.id !== id));
     await fetch(`/api/trends/${id}`, { method: 'DELETE' });

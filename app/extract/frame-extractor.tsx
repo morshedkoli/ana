@@ -6,7 +6,7 @@ import { Upload, Link as LinkIcon, Scissors, RefreshCw, Plus, Check } from 'luci
 import { cn } from '@/lib/utils';
 
 interface Frame {
-  id: number;
+  id: string;
   publicPath: string;
   timestampSec: number;
 }

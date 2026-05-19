@@ -35,7 +35,7 @@ export function GeneratePanel({
   const [provider, setProvider] = useState<'auto' | 'cloudflare' | 'pollinations'>('auto');
   const [ratio, setRatio] = useState(RATIOS[0]);
   const [useCharacterTraits, setUseCharacterTraits] = useState(true);
-  const [result, setResult] = useState<{ publicPath: string; seed: number; model: string; provider: string; id: number } | null>(null);
+  const [result, setResult] = useState<{ publicPath: string; seed: number; model: string; provider: string; id: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const characterPrefix = useCharacterTraits ? buildCharacterPrefix(character?.name, visual) : '';

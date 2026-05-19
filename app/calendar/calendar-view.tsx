@@ -45,7 +45,7 @@ export function CalendarView({ projects: initial }: { projects: VideoProject[] }
     } else toast.error('Failed to create');
   }
 
-  async function updateStatus(id: number, status: string) {
+  async function updateStatus(id: string, status: string) {
     setProjects((prev) => prev.map((p) => p.id === id ? { ...p, status } : p));
     await fetch(`/api/projects/${id}`, {
       method: 'PATCH',
