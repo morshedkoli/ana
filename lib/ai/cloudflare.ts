@@ -9,9 +9,7 @@
  * 4. Save both in /settings page of the app
  */
 
-import { db } from '@/lib/db/client';
-import { settings } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { connectDB, settings } from '@/lib/db/client';
 
 export type CloudflareModel =
   | '@cf/black-forest-labs/flux-1-schnell'
@@ -33,10 +31,13 @@ export interface CloudflareImageInput {
 }
 
 async function getCfCredentials() {
-  const rows = await db.select().from(settings).where(eq(settings.key, 'cloudflare_account_id'));
-  const tokenRows = await db.select().from(settings).where(eq(settings.key, 'cloudflare_api_token'));
-  const accountId = (rows[0]?.value as string) || process.env.CLOUDFLARE_ACCOUNT_ID || '';
-  const token = (tokenRows[0]?.value as string) || process.env.CLOUDFLARE_API_TOKEN || '';
+  await connectDB();
+  const [acctRow, tokenRow] = await Promise.all([
+    settings.findOne({ key: 'cloudflare_account_id' }),
+    settings.findOne({ key: 'cloudflare_api_token' }),
+  ]);
+  const accountId = (acctRow?.value as string) || process.env.CLOUDFLARE_ACCOUNT_ID || '';
+  const token = (tokenRow?.value as string) || process.env.CLOUDFLARE_API_TOKEN || '';
   if (!accountId || !token) {
     throw new Error('Cloudflare credentials missing. Add them in /settings.');
   }

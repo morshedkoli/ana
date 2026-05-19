@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
       const platform = /tiktok/.test(url) ? 'tiktok' :
                        /youtube|youtu\.be/.test(url) ? 'youtube' :
                        /instagram/.test(url) ? 'instagram' : 'unknown';
-      meta = { url, platform, title: '', description: '', uploader: '',
+      meta = { id: '', url, platform, title: '', description: '', uploader: '',
+        uploadDate: '', duration: 0, likeCount: 0, thumbnail: '',
         viewCount: 0, hashtags: [], audioName: undefined, raw: {} } as Awaited<ReturnType<typeof fetchVideoMeta>>;
     }
 
