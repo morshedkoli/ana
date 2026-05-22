@@ -2,8 +2,12 @@ import Link from 'next/link';
 import { connectDB, characters, images, trends, videoProjects, audioClips, plain, plainOne } from '@/lib/db/client';
 import type { VideoProject, Image, Character } from '@/lib/db/schema';
 import { PageHeader } from '@/components/shared/page-header';
-import { ArrowRight, Calendar as CalIcon, ImageIcon, TrendingUp, Mic, Plus, Sparkles } from 'lucide-react';
-import { truncate } from '@/lib/utils';
+import { ArrowRight, Calendar as CalIcon, ImageIcon, TrendingUp, Mic, Plus, Sparkles, Cpu, Cloud } from 'lucide-react';
+import { truncate, toDisplayUrl, cn } from '@/lib/utils';
+import { listProviderMetas, isProviderConfigured } from '@/lib/ai/providers/registry';
+import type { ProviderId } from '@/lib/ai/providers/types';
+import { listHostMetas, isHostConfigured, getDefaultHost } from '@/lib/hosting/registry';
+import type { HostingProviderId } from '@/lib/hosting/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +33,7 @@ async function getUpcoming() {
 
 async function getRecentImages() {
   await connectDB();
-  return plain<Image>(await images.find().sort({ createdAt: -1 }).limit(6));
+  return plain<Image>(await images.find().sort({ createdAt: -1 }).limit(12));
 }
 
 async function getActiveCharacter() {
@@ -37,9 +41,38 @@ async function getActiveCharacter() {
   return plainOne<Character>(await characters.findOne({ isActive: true }));
 }
 
+async function getAiStatus() {
+  const metas = listProviderMetas();
+  const flags = await Promise.all(metas.map(async (m) => ({
+    id: m.id, name: m.name, configured: await isProviderConfigured(m.id as ProviderId),
+  })));
+  return {
+    total: flags.length,
+    configured: flags.filter((f) => f.configured).length,
+    list: flags,
+  };
+}
+
+async function getHostStatus() {
+  const metas = listHostMetas();
+  const flags = await Promise.all(metas.map(async (m) => ({
+    id: m.id, name: m.name, requiresKey: m.requiresKey,
+    configured: await isHostConfigured(m.id as HostingProviderId),
+    capabilities: m.capabilities,
+  })));
+  const defaultHost = await getDefaultHost();
+  return {
+    list: flags,
+    configured: flags.filter((f) => f.configured && f.id !== 'local').length,
+    total: flags.filter((f) => f.requiresKey).length,
+    defaultHost,
+    defaultName: metas.find((m) => m.id === defaultHost)?.name || 'Local',
+  };
+}
+
 export default async function HomePage() {
-  const [stats, upcoming, recentImages, active] = await Promise.all([
-    getStats(), getUpcoming(), getRecentImages(), getActiveCharacter(),
+  const [stats, upcoming, recentImages, active, aiStatus, hostStatus] = await Promise.all([
+    getStats(), getUpcoming(), getRecentImages(), getActiveCharacter(), getAiStatus(), getHostStatus(),
   ]);
 
   return (
@@ -97,8 +130,8 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <QuickAction href="/generate" label="Generate image" />
             <QuickAction href="/voice" label="Make voice" />
+            <QuickAction href="/studio" label="AI Studio" />
             <QuickAction href="/trends" label="Save trend" />
-            <QuickAction href="/extract" label="Extract frames" />
           </div>
         </div>
 
@@ -116,17 +149,95 @@ export default async function HomePage() {
           ) : (
             <div className="grid grid-cols-3 gap-2">
               {recentImages.map((img) => (
-                <Link key={img.id} href="/library" className="group block aspect-[3/4] overflow-hidden rounded-md bg-elevated">
+                <Link
+                  key={img.id} href="/library"
+                  className="group relative block aspect-[3/4] overflow-hidden rounded-md bg-elevated"
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={img.thumbnailPath || img.filePath.replace(/^.*\/storage\//, '/storage/')}
+                    src={toDisplayUrl(img.remoteUrl || img.thumbnailPath || img.filePath)}
                     alt=""
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
+                  {img.hostProvider && img.hostProvider !== 'local' && (
+                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/50 px-1.5 py-0.5 text-[9px] text-white/90 backdrop-blur">
+                      <Cloud className="h-2 w-2" />
+                      {img.hostProvider}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>
           )}
+          <Link
+            href="/library"
+            className="card card-hover flex items-center justify-between px-4 py-3"
+          >
+            <div>
+              <p className="text-xs font-medium">Browse all images</p>
+              <p className="text-[10px] text-muted">{stats.images} in library · default: {hostStatus.defaultName}</p>
+            </div>
+            <ArrowRight className="h-3 w-3 text-muted" />
+          </Link>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="card p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="label-tiny flex items-center gap-1.5">
+                <Cpu className="h-3 w-3" /> AI providers
+              </p>
+              <h3 className="mt-1 font-display text-2xl">
+                {aiStatus.configured} / {aiStatus.total} connected
+              </h3>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {aiStatus.list.map((p) => (
+                  <span key={p.id} className={p.configured ? 'pill pill-success' : 'pill'}>
+                    {p.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <Link href="/studio" className="btn-primary shrink-0">
+              <Cpu className="h-4 w-4" /> AI Studio
+            </Link>
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="label-tiny flex items-center gap-1.5">
+                <Cloud className="h-3 w-3" /> Image hosts
+              </p>
+              <h3 className="mt-1 font-display text-2xl">
+                {hostStatus.configured} cloud host{hostStatus.configured === 1 ? '' : 's'}
+              </h3>
+              <p className="mt-0.5 text-xs text-muted">
+                Default: <span className="text-ink font-medium">{hostStatus.defaultName}</span>
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {hostStatus.list.map((h) => (
+                  <span
+                    key={h.id}
+                    className={cn(
+                      'pill',
+                      h.id === hostStatus.defaultHost && 'pill-accent',
+                      h.configured && h.id !== hostStatus.defaultHost && 'pill-success',
+                    )}
+                  >
+                    {h.id === hostStatus.defaultHost && '★ '}
+                    {h.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <Link href="/library" className="btn-primary shrink-0">
+              <Cloud className="h-4 w-4" /> Library
+            </Link>
+          </div>
         </div>
       </section>
 

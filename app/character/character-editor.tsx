@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Save, Upload, Star, Trash2 } from 'lucide-react';
-import { BANGLA_VOICES } from '@/lib/tts/voices';
+import { Save, Star } from 'lucide-react';
 import type { Character, Image } from '@/lib/db/schema';
-import { cn } from '@/lib/utils';
+import { cn, toDisplayUrl } from '@/lib/utils';
 
 interface PersonaBible {
   age?: number; location?: string; occupation?: string;
@@ -18,6 +17,13 @@ interface VisualTraits {
 }
 interface VoiceProfile {
   engine?: string; voiceId?: string; rate?: number; pitch?: number;
+}
+
+interface EngineLite {
+  id: string; name: string; configured: boolean; requiresKey: boolean; supportsBangla?: boolean;
+}
+interface VoiceLite {
+  id: string; label: string; language?: string; provider: string;
 }
 
 const TABS = ['Persona', 'Visual', 'Voice', 'Master image'] as const;
@@ -33,6 +39,25 @@ export function CharacterEditor({
   const [voice, setVoice] = useState<VoiceProfile>(character.voiceProfile as VoiceProfile || {});
   const [masterImageId, setMasterImageId] = useState<string | null>(character.masterImageId ?? null);
   const [isPending, startTransition] = useTransition();
+
+  // TTS engines + voices loaded from the registry
+  const [engines, setEngines] = useState<EngineLite[]>([]);
+  const [voices, setVoices] = useState<VoiceLite[]>([]);
+
+  useEffect(() => {
+    fetch('/api/tts/engines')
+      .then((r) => r.json())
+      .then((d) => setEngines(d.engines || []))
+      .catch(() => { /* ignore */ });
+  }, []);
+
+  useEffect(() => {
+    const id = voice.engine || 'edge';
+    fetch(`/api/tts/engines/${id}/voices`)
+      .then((r) => r.json())
+      .then((d) => setVoices(d.voices || []))
+      .catch(() => setVoices([]));
+  }, [voice.engine]);
 
   async function save() {
     startTransition(async () => {
@@ -58,11 +83,21 @@ export function CharacterEditor({
     const res = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: sample, voice: voice.voiceId, rate: voice.rate, pitch: voice.pitch }),
+      body: JSON.stringify({
+        engine: voice.engine || 'edge',
+        text: sample,
+        voice: voice.voiceId,
+        rate: voice.rate,
+        pitch: voice.pitch,
+      }),
     });
-    if (!res.ok) { toast.error('Voice generation failed. Is edge-tts installed?'); return; }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || 'Voice generation failed.');
+      return;
+    }
     const data = await res.json();
-    const audio = new Audio(data.publicPath);
+    const audio = new Audio(toDisplayUrl(data.publicPath));
     audio.play();
     toast.success('Playing sample');
   }
@@ -70,21 +105,23 @@ export function CharacterEditor({
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border/60">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'relative px-4 py-2.5 text-sm font-medium transition-colors',
-              tab === t ? 'text-ink' : 'text-muted hover:text-ink'
-            )}
-          >
-            {t}
-            {tab === t && <div className="absolute -bottom-px left-0 right-0 h-px bg-accent" />}
-          </button>
-        ))}
-        <div className="ml-auto flex items-center gap-2 pb-2">
+      <div className="flex flex-wrap items-center gap-1 border-b border-border/60">
+        <div className="flex flex-1 min-w-0 overflow-x-auto -mb-px">
+          {TABS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                'relative whitespace-nowrap px-3 sm:px-4 py-2.5 text-sm font-medium transition-colors',
+                tab === t ? 'text-ink' : 'text-muted hover:text-ink'
+              )}
+            >
+              {t}
+              {tab === t && <div className="absolute bottom-0 left-0 right-0 h-px bg-accent" />}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 pb-2 ml-auto">
           <button onClick={save} disabled={isPending} className="btn-primary">
             <Save className="h-4 w-4" /> {isPending ? 'Saving…' : 'Save'}
           </button>
@@ -197,19 +234,29 @@ export function CharacterEditor({
       {tab === 'Voice' && (
         <div className="space-y-4 max-w-2xl">
           <Field label="Engine">
-            <select value={voice.engine || 'edge-tts'}
-              onChange={(e) => setVoice({ ...voice, engine: e.target.value })}
+            <select value={voice.engine || 'edge'}
+              onChange={(e) => setVoice({ ...voice, engine: e.target.value, voiceId: '' })}
               className="input-base">
-              <option value="edge-tts">Edge TTS (free, unlimited)</option>
-              <option value="elevenlabs">ElevenLabs (manual paste)</option>
+              {engines.length === 0 && <option value="edge">Edge TTS</option>}
+              {engines.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                  {e.requiresKey ? (e.configured ? ' ✓' : ' · no key') : ''}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="Voice">
-            <select value={voice.voiceId || 'bn-BD-NabanitaNeural'}
+            <select
+              value={voice.voiceId || (voices[0]?.id || '')}
               onChange={(e) => setVoice({ ...voice, voiceId: e.target.value })}
-              className="input-base">
-              {BANGLA_VOICES.map(v => (
-                <option key={v.id} value={v.id}>{v.label}</option>
+              className="input-base"
+            >
+              {voices.length === 0 && <option value="">— loading —</option>}
+              {voices.map((v) => (
+                <option key={`${v.provider}-${v.id}`} value={v.id}>
+                  {v.label}{v.language ? ` · ${v.language}` : ''}
+                </option>
               ))}
             </select>
           </Field>
@@ -227,8 +274,9 @@ export function CharacterEditor({
                 className="w-full" />
             </Field>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button onClick={testVoice} className="btn-ghost">Test voice (Bangla sample)</button>
+            <a href="/voice" className="btn-ghost">Open Voice Lab →</a>
           </div>
         </div>
       )}

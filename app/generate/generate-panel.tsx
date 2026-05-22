@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Sparkles, Wand2, Copy, RefreshCw } from 'lucide-react';
 import type { Character, Prompt } from '@/lib/db/schema';
+import { ProviderModelPicker } from '@/components/shared/provider-model-picker';
 
 interface VisualTraits {
   face?: string; hair?: string; eyes?: string;
@@ -32,7 +33,8 @@ export function GeneratePanel({
   const visual = (character?.visualTraits as VisualTraits) || {};
 
   const [prompt, setPrompt] = useState('');
-  const [provider, setProvider] = useState<'auto' | 'cloudflare' | 'pollinations'>('auto');
+  const [provider, setProvider] = useState('auto');
+  const [model, setModel] = useState('');
   const [ratio, setRatio] = useState(RATIOS[0]);
   const [useCharacterTraits, setUseCharacterTraits] = useState(true);
   const [result, setResult] = useState<{ publicPath: string; seed: number; model: string; provider: string; id: string } | null>(null);
@@ -52,6 +54,7 @@ export function GeneratePanel({
         body: JSON.stringify({
           prompt: finalPrompt,
           provider,
+          model: model || undefined,
           width: ratio.w,
           height: ratio.h,
         }),
@@ -110,25 +113,23 @@ export function GeneratePanel({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label-tiny">Provider</label>
-              <select value={provider} onChange={(e) => setProvider(e.target.value as typeof provider)} className="input-base mt-1.5">
-                <option value="auto">Auto (Cloudflare → Pollinations)</option>
-                <option value="cloudflare">Cloudflare (Flux)</option>
-                <option value="pollinations">Pollinations (unlimited)</option>
-              </select>
-            </div>
-            <div>
-              <label className="label-tiny">Aspect</label>
-              <select
-                value={ratio.label}
-                onChange={(e) => setRatio(RATIOS.find(r => r.label === e.target.value)!)}
-                className="input-base mt-1.5"
-              >
-                {RATIOS.map(r => <option key={r.label} value={r.label}>{r.label}</option>)}
-              </select>
-            </div>
+          <ProviderModelPicker
+            kind="image"
+            provider={provider}
+            model={model}
+            onChange={({ provider: p, model: m }) => { setProvider(p); setModel(m); }}
+            allowAuto
+          />
+
+          <div>
+            <label className="label-tiny">Aspect</label>
+            <select
+              value={ratio.label}
+              onChange={(e) => setRatio(RATIOS.find(r => r.label === e.target.value)!)}
+              className="input-base mt-1.5"
+            >
+              {RATIOS.map(r => <option key={r.label} value={r.label}>{r.label}</option>)}
+            </select>
           </div>
 
           <button onClick={generate} disabled={loading} className="btn-primary w-full">

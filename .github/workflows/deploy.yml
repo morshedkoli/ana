@@ -32,6 +32,9 @@ jobs:
             echo "▶ Running DB migrations..."
             node --env-file=.env --import=tsx lib/db/migrate.ts
 
+            echo "▶ Pre-warming runtime binaries (yt-dlp)..."
+            npm run prepare-binaries
+
             echo "▶ Building app..."
             npm run build
 

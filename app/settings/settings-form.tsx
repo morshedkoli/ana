@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Save, Download, Key } from 'lucide-react';
+import { Save, Download, Key, Cpu, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 export function SettingsForm({ initial }: { initial: Record<string, unknown> }) {
   const [accountId, setAccountId] = useState((initial.cloudflare_account_id as string) || '');
@@ -43,17 +44,26 @@ export function SettingsForm({ initial }: { initial: Record<string, unknown> }) 
 
   return (
     <div className="space-y-8 max-w-2xl">
+      <Link href="/studio" className="card card-hover flex items-center gap-4 p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent/15">
+          <Cpu className="h-5 w-5 text-accent" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-lg">AI providers moved to AI Studio</p>
+          <p className="text-xs text-muted">Manage keys for Cloudflare, Hugging Face, OpenRouter, Groq, Gemini, Pollinations.</p>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted" />
+      </Link>
+
       <section className="card p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Key className="h-4 w-4 text-accent" />
-          <h2 className="font-display text-xl">Cloudflare Workers AI</h2>
+          <h2 className="font-display text-xl">Cloudflare Workers AI (legacy)</h2>
         </div>
         <p className="text-sm text-muted">
-          Get from{' '}
-          <a href="https://dash.cloudflare.com" target="_blank" rel="noreferrer" className="text-accent underline-offset-4 hover:underline">
-            Cloudflare Dashboard
-          </a>
-          {' '}→ Workers AI. Free tier: ~50–100 Flux images/day.
+          Kept for backward compatibility. Prefer{' '}
+          <Link href="/studio" className="text-accent underline-offset-4 hover:underline">AI Studio</Link>
+          {' '}for managing all providers.
         </p>
         <div>
           <label className="label-tiny">Account ID</label>

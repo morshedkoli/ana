@@ -1,12 +1,13 @@
 /**
  * FFmpeg wrapper for video processing.
- * Requires: apt install ffmpeg
+ * Uses the bundled ffmpeg-static / ffprobe-static binaries (no system install required).
  */
 
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { resolveFfmpeg, resolveFfprobe } from './ffmpeg-binary';
 
 const FRAMES_DIR = path.join(process.cwd(), 'storage', 'frames');
 
@@ -87,20 +88,23 @@ export async function extractFrames(opts: FrameExtractOptions): Promise<Extracte
 
 function runFfmpeg(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('ffmpeg', args);
-    let stderr = '';
-    proc.stderr.on('data', (c) => { stderr += c.toString(); });
-    proc.on('error', reject);
-    proc.on('close', (code) => {
-      if (code !== 0) return reject(new Error(`ffmpeg exited ${code}: ${stderr.slice(-500)}`));
-      resolve();
-    });
+    resolveFfmpeg().then((bin) => {
+      const proc = spawn(bin, args);
+      let stderr = '';
+      proc.stderr.on('data', (c) => { stderr += c.toString(); });
+      proc.on('error', reject);
+      proc.on('close', (code) => {
+        if (code !== 0) return reject(new Error(`ffmpeg exited ${code}: ${stderr.slice(-500)}`));
+        resolve();
+      });
+    }).catch(reject);
   });
 }
 
 export async function getVideoDuration(videoPath: string): Promise<number> {
+  const bin = await resolveFfprobe();
   return new Promise((resolve, reject) => {
-    const proc = spawn('ffprobe', [
+    const proc = spawn(bin, [
       '-v', 'error',
       '-show_entries', 'format=duration',
       '-of', 'default=noprint_wrappers=1:nokey=1',

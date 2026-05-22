@@ -57,66 +57,165 @@ export function CalendarView({ projects: initial }: { projects: VideoProject[] }
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="card flex items-center justify-between p-3">
-        <div className="flex items-center gap-2">
+      <div className="card flex items-center justify-between gap-2 p-3">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0">
           <button onClick={() => setCursor(addMonths(cursor, -1))} className="btn-icon">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <h2 className="font-display text-xl px-2">
+          <h2 className="font-display text-base sm:text-xl px-1 sm:px-2 truncate">
             {cursor.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
           </h2>
           <button onClick={() => setCursor(addMonths(cursor, 1))} className="btn-icon">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-        <button onClick={() => setCursor(new Date())} className="btn-ghost text-xs">Today</button>
+        <button onClick={() => setCursor(new Date())} className="btn-ghost text-xs shrink-0">Today</button>
       </div>
 
-      {/* Day headers */}
-      <div className="grid grid-cols-7 gap-1 px-1">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-          <div key={d} className="label-tiny text-center">{d}</div>
-        ))}
-      </div>
-
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {calendarDays.map((d, i) => {
-          const iso = d.date.toISOString().slice(0, 10);
-          const dayProjects = projectsForDate(iso);
-          const isToday = iso === new Date().toISOString().slice(0, 10);
-          return (
-            <div key={i} className={cn(
-              'card min-h-[120px] p-2 transition-colors',
-              !d.inMonth && 'opacity-40',
-              isToday && 'border-accent/50 shadow-[0_0_18px_hsl(var(--accent)/0.15)]'
-            )}>
-              <div className="mb-1 flex items-center justify-between">
-                <span className={cn('text-xs', isToday && 'font-bold text-accent')}>
-                  {d.date.getDate()}
-                </span>
-                <button onClick={() => setCreating(iso)} className="btn-icon h-5 w-5">
-                  <Plus className="h-3 w-3" />
-                </button>
+      {/* Mobile: agenda list (only days with projects + today) */}
+      <div className="space-y-2 sm:hidden">
+        {(() => {
+          const todayIso = new Date().toISOString().slice(0, 10);
+          const monthDays = calendarDays.filter((d) => d.inMonth);
+          const visible = monthDays.filter((d) => {
+            const iso = d.date.toISOString().slice(0, 10);
+            return iso === todayIso || projectsForDate(iso).length > 0;
+          });
+          if (visible.length === 0) {
+            return (
+              <div className="card p-6 text-center text-sm text-muted">
+                Nothing planned this month. Tap a day below to add.
               </div>
-              <div className="space-y-1">
-                {dayProjects.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setEditing(p)}
-                    className={cn(
-                      'block w-full rounded border px-1.5 py-1 text-left text-[10px] leading-tight',
-                      STATUS_COLORS[p.status || 'idea']
-                    )}
-                  >
-                    <div className="truncate font-medium">{p.title}</div>
-                    <div className="opacity-70">{p.contentType}</div>
+            );
+          }
+          return visible.map((d, i) => {
+            const iso = d.date.toISOString().slice(0, 10);
+            const dayProjects = projectsForDate(iso);
+            const isToday = iso === todayIso;
+            return (
+              <div key={i} className={cn(
+                'card p-3',
+                isToday && 'border-accent/50 shadow-[0_0_18px_hsl(var(--accent)/0.15)]'
+              )}>
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-baseline gap-2">
+                    <span className={cn('font-display text-lg', isToday && 'text-accent')}>
+                      {d.date.getDate()}
+                    </span>
+                    <span className="label-tiny">
+                      {d.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short' })}
+                    </span>
+                  </div>
+                  <button onClick={() => setCreating(iso)} className="btn-icon h-7 w-7">
+                    <Plus className="h-3 w-3" />
                   </button>
-                ))}
+                </div>
+                {dayProjects.length === 0 ? (
+                  <p className="text-xs text-muted">Empty</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {dayProjects.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setEditing(p)}
+                        className={cn(
+                          'block w-full rounded border px-2 py-1.5 text-left text-xs',
+                          STATUS_COLORS[p.status || 'idea']
+                        )}
+                      >
+                        <div className="truncate font-medium">{p.title}</div>
+                        <div className="text-[10px] opacity-70">
+                          {p.contentType} · {p.status}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
+
+        {/* Mini month grid for quick day-tapping on mobile */}
+        <div className="card p-3">
+          <p className="label-tiny mb-2">Tap a day to add</p>
+          <div className="grid grid-cols-7 gap-1">
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+              <div key={i} className="label-tiny text-center">{d}</div>
+            ))}
+            {calendarDays.map((d, i) => {
+              const iso = d.date.toISOString().slice(0, 10);
+              const dayProjects = projectsForDate(iso);
+              const isToday = iso === new Date().toISOString().slice(0, 10);
+              return (
+                <button
+                  key={i}
+                  onClick={() => setCreating(iso)}
+                  className={cn(
+                    'relative flex aspect-square items-center justify-center rounded text-xs transition-colors',
+                    !d.inMonth && 'opacity-30',
+                    isToday ? 'bg-accent/20 text-accent font-bold' : 'hover:bg-elevated text-muted'
+                  )}
+                >
+                  {d.date.getDate()}
+                  {dayProjects.length > 0 && (
+                    <span className="absolute bottom-0.5 right-0.5 h-1 w-1 rounded-full bg-accent" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Tablet/Desktop: full month grid */}
+      <div className="hidden sm:block space-y-2">
+        {/* Day headers */}
+        <div className="grid grid-cols-7 gap-1 px-1">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+            <div key={d} className="label-tiny text-center">{d}</div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {calendarDays.map((d, i) => {
+            const iso = d.date.toISOString().slice(0, 10);
+            const dayProjects = projectsForDate(iso);
+            const isToday = iso === new Date().toISOString().slice(0, 10);
+            return (
+              <div key={i} className={cn(
+                'card min-h-[100px] lg:min-h-[120px] p-2 transition-colors',
+                !d.inMonth && 'opacity-40',
+                isToday && 'border-accent/50 shadow-[0_0_18px_hsl(var(--accent)/0.15)]'
+              )}>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className={cn('text-xs', isToday && 'font-bold text-accent')}>
+                    {d.date.getDate()}
+                  </span>
+                  <button onClick={() => setCreating(iso)} className="btn-icon h-5 w-5">
+                    <Plus className="h-3 w-3" />
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {dayProjects.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setEditing(p)}
+                      className={cn(
+                        'block w-full rounded border px-1.5 py-1 text-left text-[10px] leading-tight',
+                        STATUS_COLORS[p.status || 'idea']
+                      )}
+                    >
+                      <div className="truncate font-medium">{p.title}</div>
+                      <div className="opacity-70">{p.contentType}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Create modal */}

@@ -42,6 +42,12 @@ const imageSchema = new Schema({
   isMaster: { type: Boolean, default: false },
   isFavorite: { type: Boolean, default: false },
   notes: { type: String, default: null },
+  // --- Cloud hosting metadata (added when mirrored to a remote provider) ---
+  hostProvider: { type: String, default: null }, // 'cloudinary' | 'imgbb' | ...
+  remoteUrl: { type: String, default: null },
+  remoteId: { type: String, default: null },
+  remoteDeleteUrl: { type: String, default: null },
+  remoteBytes: { type: Number, default: null },
 }, { timestamps: { createdAt: 'createdAt', updatedAt: false }, ...opts });
 
 export const images = (models.images as mongoose.Model<ImageDoc>) ||
@@ -75,6 +81,9 @@ const trendSchema = new Schema({
   description: { type: String, default: null },
   thumbnailPath: { type: String, default: null },
   videoPath: { type: String, default: null },
+  videoBytes: { type: Number, default: null },
+  downloadStatus: { type: String, default: 'pending' }, // pending | downloading | ready | failed | skipped
+  downloadError: { type: String, default: null },
   creator: { type: String, default: null },
   hashtags: { type: [String], default: [] },
   category: { type: String, default: null },
@@ -144,6 +153,12 @@ export const productionTasks = (models.productionTasks as mongoose.Model<Product
 const extractedFrameSchema = new Schema({
   sourceUrl: { type: String, default: null },
   sourceVideoPath: { type: String, default: null },
+  /** Public /storage/videos/... URL for previewing the source clip in the UI */
+  sourceVideoPublicPath: { type: String, default: null },
+  /** Groups frames extracted in the same run for the UI history list */
+  batchId: { type: String, default: null },
+  /** Public /storage/frames/... URL */
+  publicPath: { type: String, default: null },
   trendId: { type: String, default: null },
   framePath: { type: String, required: true },
   timestampSec: { type: Number, default: null },
@@ -201,6 +216,26 @@ export const postQueue = (models.postQueue as mongoose.Model<PostQueueDoc>) ||
   model<PostQueueDoc>('postQueue', postQueueSchema);
 
 /* ============================================================
+   USERS  (email + password auth)
+   ============================================================ */
+const userSchema = new Schema({
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  /** scrypt hash, format: "scrypt:<N>:<r>:<p>:<saltHex>:<keyHex>" */
+  passwordHash: { type: String, required: true },
+  name: { type: String, default: null },
+  /** "admin" can register additional users; "user" is read/write but cannot
+   *  invite. The first user bootstrapped is always admin. */
+  role: { type: String, default: 'user' },
+  isActive: { type: Boolean, default: true },
+  /** Bumping this invalidates every existing session for the user. */
+  sessionEpoch: { type: Number, default: 0 },
+  lastLoginAt: { type: Date, default: null },
+}, { timestamps: true, ...opts });
+
+export const users = (models.users as mongoose.Model<UserDoc>) ||
+  model<UserDoc>('users', userSchema);
+
+/* ============================================================
    Document interfaces (internal Mongoose docs)
    ============================================================ */
 interface CharacterDoc {
@@ -228,6 +263,11 @@ interface ImageDoc {
   isMaster?: boolean;
   isFavorite?: boolean;
   notes?: string | null;
+  hostProvider?: string | null;
+  remoteUrl?: string | null;
+  remoteId?: string | null;
+  remoteDeleteUrl?: string | null;
+  remoteBytes?: number | null;
 }
 
 interface AudioClipDoc {
@@ -249,6 +289,9 @@ interface TrendDoc {
   description?: string | null;
   thumbnailPath?: string | null;
   videoPath?: string | null;
+  videoBytes?: number | null;
+  downloadStatus?: string | null;
+  downloadError?: string | null;
   creator?: string | null;
   hashtags?: string[];
   category?: string | null;
@@ -297,6 +340,9 @@ interface ProductionTaskDoc {
 interface ExtractedFrameDoc {
   sourceUrl?: string | null;
   sourceVideoPath?: string | null;
+  sourceVideoPublicPath?: string | null;
+  batchId?: string | null;
+  publicPath?: string | null;
   trendId?: string | null;
   framePath: string;
   timestampSec?: number | null;
@@ -330,6 +376,16 @@ interface PostQueueDoc {
   platform?: string;
   reminderSent?: boolean;
   posted?: boolean;
+}
+
+interface UserDoc {
+  email: string;
+  passwordHash: string;
+  name?: string | null;
+  role?: 'admin' | 'user';
+  isActive?: boolean;
+  sessionEpoch?: number;
+  lastLoginAt?: Date | null;
 }
 
 /* ============================================================
@@ -366,6 +422,11 @@ export type Image = {
   isMaster?: boolean;
   isFavorite?: boolean;
   notes?: string | null;
+  hostProvider?: string | null;
+  remoteUrl?: string | null;
+  remoteId?: string | null;
+  remoteDeleteUrl?: string | null;
+  remoteBytes?: number | null;
   createdAt?: string;
 };
 
@@ -395,6 +456,9 @@ export type Trend = {
   description?: string | null;
   thumbnailPath?: string | null;
   videoPath?: string | null;
+  videoBytes?: number | null;
+  downloadStatus?: string | null;
+  downloadError?: string | null;
   creator?: string | null;
   hashtags?: string[];
   category?: string | null;
@@ -452,6 +516,9 @@ export type ExtractedFrame = {
   id: string;
   sourceUrl?: string | null;
   sourceVideoPath?: string | null;
+  sourceVideoPublicPath?: string | null;
+  batchId?: string | null;
+  publicPath?: string | null;
   trendId?: string | null;
   framePath: string;
   timestampSec?: number | null;
@@ -474,4 +541,16 @@ export type Prompt = {
   successCount?: number;
   notes?: string | null;
   createdAt?: string;
+};
+
+export type User = {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: 'admin' | 'user';
+  isActive: boolean;
+  sessionEpoch?: number;
+  lastLoginAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };

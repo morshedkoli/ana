@@ -43,3 +43,21 @@ export function formatDuration(sec: number): string {
   const s = Math.round(sec % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
 }
+
+/**
+ * Resolve any image record to a URL the browser can load.
+ *  - Absolute http(s) URLs (cloud-hosted images) → returned as-is
+ *  - Already-public /storage/... paths            → returned as-is
+ *  - Absolute on-disk paths                       → mapped to /storage/...
+ */
+export function toDisplayUrl(p?: string | null): string {
+  if (!p) return '';
+  if (p.startsWith('http://') || p.startsWith('https://')) return p;
+  if (p.startsWith('/storage/')) return p;
+  const idx = p.indexOf('/storage/');
+  if (idx >= 0) return p.slice(idx);
+  // Fallback: assume it's a filename in the images dir
+  const winIdx = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
+  if (winIdx >= 0) return `/storage/images/${p.slice(winIdx + 1)}`;
+  return p;
+}

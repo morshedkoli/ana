@@ -8,7 +8,11 @@ storage/audio
 storage/videos
 storage/frames
 storage/thumbnails
+storage/bin
+storage/tmp
 .env
 .env.local
 *.log
 .DS_Store
+.vscode
+tsconfig.tsbuildinfo
